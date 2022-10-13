@@ -1,0 +1,74 @@
+version: '3.5'
+## Please run with "docker compose" not "docker-compose"
+## You may need to install docker compose *plugin*
+
+volumes:
+  i2b2-db:
+
+services:
+  i2b2-web:
+    container_name:
+      i2b2.web
+    restart: on-failure:5
+    image: i2b2/i2b2-web:${I2B2_WEB_TAG}
+    ports:
+      - 80:80
+      - 443:443
+    command: /run-httpd.sh localhost
+    env_file:
+      - .env
+    depends_on:
+      - i2b2-wildfly
+  i2b2-wildfly:
+    container_name:
+      i2b2.wildfly
+    restart: on-failure:5
+    image: i2b2/i2b2-wildfly:${I2B2_WILDFLY_TAG}
+    ports:
+      - 8080:8080
+      - 9990:9990
+    environment:
+      - DS_TYPE=${I2B2_DS_TYPE}
+      - DS_IP=${I2B2_DS_IP}
+      - DS_PORT=${I2B2_DS_PORT}
+      - DS_PM_USER=${I2B2_DS_PM_USER}
+      - DS_WD_USER=${I2B2_DS_WD_USER}
+      - DS_HIVE_USER=${I2B2_DS_HIVE_USER}
+      - DS_PM_PASS=${I2B2_DS_PM_PASS}
+      - DS_WD_PASS=${I2B2_DS_WD_PASS}
+      - DS_HIVE_PASS=${I2B2_DS_HIVE_PASS}
+
+      - DS_CRC_IP=${I2B2_DS_CRC_IP}
+      - DS_CRC_PORT=${I2B2_DS_CRC_PORT}
+      - DS_CRC_USER=${I2B2_DS_CRC_USER}
+      - DS_CRC_PASS=${I2B2_DS_CRC_PASS}
+      - DS_CRC_DB=${I2B2_DS_CRC_DB}
+      
+      - DS_ONT_IP=${I2B2_DS_ONT_IP}
+      - DS_ONT_PORT=${I2B2_DS_ONT_PORT}
+      - DS_ONT_USER=${I2B2_DS_ONT_USER}
+      - DS_ONT_PASS=${I2B2_DS_ONT_PASS}
+      - DS_ONT_DB=${I2B2_DS_ONT_DB}
+    depends_on:
+      - i2b2-database
+  i2b2-database:
+    container_name:
+      i2b2.database
+    restart: on-failure:5
+    image: postgres:12
+    ports:
+      - 5432:5432
+    volumes:
+      - i2b2-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=ChangeMe
+    depends_on:
+      - i2b2-pg-vol-loader
+
+  ## This service starts up and adds data via the shared volume. Then it should stop
+  i2b2-pg-vol-loader:
+    image: i2b2/i2b2-pg-vol:${I2B2_PG_TAG}
+    container_name: i2b2-pg-vol-loader
+    volumes:
+      - i2b2-db:/var/lib/postgresql/data
+    entrypoint: /bin/sh
