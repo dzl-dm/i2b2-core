@@ -3,10 +3,7 @@
 ARG i2b2_version=${i2b2_version:-1.7.13.0002}
 ARG WEB_TAG=${I2B2_WEB_TAG:-'release-v1.7.13'}
 ## php:8.1.11-apache-bullseye uses apache 2.4.54
-# FROM php:8.1.11-apache-bullseye
-# FROM php:8.1.11-fpm-bullseye  ##?
-# FROM httpd:2.4.54-bullseye
-FROM php:5.4.45-apache
+FROM php:8.1.11-apache-bullseye
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
@@ -21,7 +18,7 @@ ENV TZ=${TZ:-'Europe/Berlin'}
 
 ## App defaults
 ENV ORGANISATION_NAME='Local i2b2 data warehouse'
-ENV WEB_FQDN='localhost'
+ENV web_fqdn='localhost'
 ENV wildfly_scheme='http'
 ENV wildfly_url='i2b2-wildfly'
 ENV wildfly_port='8080'
@@ -39,6 +36,6 @@ COPY ./config /docker-config/
 COPY ./bootstrap-web.sh /usr/local/bin/docker-bootstrap.sh
 
 ## Override entrypoint for custom initialisation...
-ENTRYPOINT ["docker-bootstrap.sh"]
+ENTRYPOINT ["docker-bootstrap.sh", "docker-php-entrypoint"]
 ## From upstream (must be repeated)...
 CMD ["apache2-foreground"]
