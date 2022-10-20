@@ -10,11 +10,16 @@ services:
     container_name:
       i2b2.web
     restart: on-failure:5
-    image: i2b2/i2b2-web:${I2B2_WEB_TAG}
+    # image: ${IMAGE_NAMESPACE}/i2b2/i2b2-web:${APP_VERSION}
+    build:
+      context: ./web
+      dockerfile: Dockerfile
     ports:
       - 80:80
       - 443:443
-    command: /run-httpd.sh localhost
+    env_file:
+      - .env
+      - .env.i2b2
     depends_on:
       - i2b2-wildfly
   i2b2-wildfly:
@@ -26,6 +31,7 @@ services:
       - 8080:8080
       - 9990:9990
     env_file:
+      - .env
       - .env.i2b2
     depends_on:
       - i2b2-database
