@@ -26,7 +26,12 @@ services:
     container_name:
       i2b2.wildfly
     restart: on-failure:5
-    image: i2b2/i2b2-wildfly:${I2B2_WILDFLY_TAG}
+    # image: i2b2/i2b2-wildfly:${I2B2_WILDFLY_TAG}
+    build:
+      context: ./wildfly
+      dockerfile: Dockerfile
+    # entrypoint:
+    #   tail -F any
     ports:
       - 8080:8080
       - 9990:9990
