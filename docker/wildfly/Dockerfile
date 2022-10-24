@@ -20,7 +20,7 @@ FROM debian:11-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
-    apt install -y \
+    apt install -y --no-install-recommends \
     openjdk-11-jre curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -50,16 +50,24 @@ RUN cd /tmp/ && \
     tar xf wildfly-${wildfly_version}.tar.gz && \
     mv /tmp/wildfly-${wildfly_version} $JBOSS_HOME && \
     rm wildfly-${wildfly_version}.tar.gz && \
+    rm -rf ${JBOSS_HOME}/standalone/configuration/standalone_xml_history && \
+
     cd /usr/lib/jvm/ && \
     ln -s java-11-openjdk-amd64 jre && \
+
     chown -R jboss:0 ${JBOSS_HOME} && \
-    chmod -R g+rw ${JBOSS_HOME}
+    chmod -R g+rw ${JBOSS_HOME} && \
+    chmod -R g+rwX ${JBOSS_HOME}/standalone && \
+    chmod -R g+rwX ${JBOSS_HOME}/modules
+
 ENV LAUNCH_JBOSS_IN_BACKGROUND=true
-USER jboss
 EXPOSE 8080
 
 ## Add i2b2.war from i2b2's docker image
-COPY --from=pre-built-war /opt/jboss/wildfly/customization /opt/jboss/wildfly/customization
+COPY --from=pre-built-war --chown=jboss:0 /opt/jboss/wildfly/customization /opt/jboss/wildfly/customization
+## Tidy up history and permissions
+RUN chmod +x ${JBOSS_HOME}/customization/execute.sh
+USER jboss
 
 ## Setup default environment for i2b2
 ENV jdbc_pg_driver_version=42.2.8 jdbc_pg_driver_download_url=https://jdbc.postgresql.org/download/postgresql-.jar
@@ -70,16 +78,6 @@ ENV DS_TYPE=postgres DS_IP=i2b2-database DS_PORT=5432
 ## Default login data
 ENV DS_CRC_USER=i2b2demodata DS_ONT_USER=i2b2metadata DS_PM_USER=i2b2pm DS_IM_USER=i2b2imdata DS_WD_USER=i2b2workdata DS_HIVE_USER=i2b2hive
 ENV DS_CRC_DB=i2b2demodata DS_ONT_DB=i2b2metadata DS_PM_DB=i2b2pm DS_IM_DB=i2b2imdata DS_WD_DB=i2b2workdata DS_HIVE_DB=i2b2hive
-
-## Tidy up history and permissions
-USER root
-RUN rm -rf /opt/jboss/wildfly/standalone/configuration/standalone_xml_history
-RUN chgrp -R 0 /opt/jboss/wildfly/standalone && \
-    chmod -R g+rwX /opt/jboss/wildfly/standalone && \
-    chgrp -R 0 /opt/jboss/wildfly/modules && \
-    chmod -R g+rwX /opt/jboss/wildfly/modules && \
-    chmod +x /opt/jboss/wildfly/customization/execute.sh
-USER jboss
 
 ## Add our own bootstrap script
 COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
