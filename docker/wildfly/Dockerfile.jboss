@@ -1,0 +1,43 @@
+## Install apache and proxy manually to keep image size low, aid transparency
+## and reduce dependancy on i2b2's images (in particular for security updates of dependencies - apache and php)
+ARG I2B2_WILDFLY_TAG=${I2B2_WILDFLY_TAG:-release-v1.7.13}
+
+## Use i2b2's image to get the i2b2 ".war", but still build our own final image
+FROM i2b2/i2b2-wildfly:${I2B2_WILDFLY_TAG} as pre-built-war
+
+## Official RedHat Jboss/Wildfly image
+FROM quay.io/wildfly/wildfly:26.1.2.Final
+# FROM quay.io/wildfly/wildfly:23.0.2.Final
+
+## System env
+ENV TZ=${TZ:-'Europe/Berlin'}
+
+## Add i2b2.war from i2b2's docker image
+COPY --from=pre-built-war /opt/jboss/wildfly/customization /opt/jboss/wildfly/customization
+
+## Setup default environment for i2b2
+ENV jdbc_pg_driver_version=42.2.8 jdbc_pg_driver_download_url=https://jdbc.postgresql.org/download/postgresql-.jar
+ENV JBOSS_HTTP_PORT=8080
+ENV DEBUG_ENABLED=false
+## Default env's for postgres database
+ENV DS_TYPE=postgres DS_IP=i2b2-database DS_PORT=5432
+## Default login data
+ENV DS_CRC_USER=i2b2demodata DS_ONT_USER=i2b2metadata DS_PM_USER=i2b2pm DS_IM_USER=i2b2imdata DS_WD_USER=i2b2workdata DS_HIVE_USER=i2b2hive
+ENV DS_CRC_DB=i2b2demodata DS_ONT_DB=i2b2metadata DS_PM_DB=i2b2pm DS_IM_DB=i2b2imdata DS_WD_DB=i2b2workdata DS_HIVE_DB=i2b2hive
+
+## Tidy up history and permissions
+USER root
+RUN rm -rf /opt/jboss/wildfly/standalone/configuration/standalone_xml_history
+RUN chgrp -R 0 /opt/jboss/wildfly/standalone && \
+    chmod -R g+rwX /opt/jboss/wildfly/standalone && \
+    chgrp -R 0 /opt/jboss/wildfly/modules && \
+    chmod -R g+rwX /opt/jboss/wildfly/modules && \
+    chmod +x /opt/jboss/wildfly/customization/execute.sh
+USER jboss
+
+COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
+
+## Override entrypoint for custom initialisation...
+ENTRYPOINT ["docker-bootstrap.sh"]
+## From upstream (must be repeated)...
+CMD ["/opt/jboss/wildfly/customization/execute.sh"]

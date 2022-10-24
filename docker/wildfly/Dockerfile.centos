@@ -15,15 +15,10 @@ ARG wildfly_sha1=${wildfly_sha1:-ef0372589a0f08c36b15360fe7291721a7e3f7d9}
 ## Use i2b2's image to get the i2b2 ".war", but still build our own final image
 FROM i2b2/i2b2-wildfly:${I2B2_WILDFLY_TAG} as pre-built-war
 
-## Build from debian and use specific java and wildfly versions
-FROM debian:11-slim
+## Build from centos to use specific java and wildfly versions
+FROM centos:7.9.2009
 
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt update && \
-    apt install -y \
-    openjdk-11-jre curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN yum update -y && yum -y install java-11-openjdk && yum clean all  
 
 ENV TZ=${TZ:-'Europe/Berlin'}
 
@@ -39,7 +34,6 @@ ARG wildfly_version
 ARG wildfly_sha1
 ENV JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/jre}
 ENV JBOSS_HOME=${JBOSS_HOME:-/opt/jboss/wildfly}
-## Caution: Artefact hosting server changed from ~v25.x.x onwards (jboss.org -> github.com)
 RUN cd /tmp/ && \
     [[ $(echo $wildfly_version|cut -d. -f 1) -ge 25 ]] && \
     curl -OL https://github.com/wildfly/wildfly/releases/download/${wildfly_version}/wildfly-${wildfly_version}.tar.gz || \
@@ -50,8 +44,8 @@ RUN cd /tmp/ && \
     tar xf wildfly-${wildfly_version}.tar.gz && \
     mv /tmp/wildfly-${wildfly_version} $JBOSS_HOME && \
     rm wildfly-${wildfly_version}.tar.gz && \
-    cd /usr/lib/jvm/ && \
-    ln -s java-11-openjdk-amd64 jre && \
+    # cd /usr/lib/jvm/ && \
+    # ln -s java-11-openjdk-amd64 jre && \
     chown -R jboss:0 ${JBOSS_HOME} && \
     chmod -R g+rw ${JBOSS_HOME}
 ENV LAUNCH_JBOSS_IN_BACKGROUND=true
