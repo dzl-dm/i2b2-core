@@ -65,8 +65,11 @@ EXPOSE 8080
 
 ## Add i2b2.war from i2b2's docker image
 COPY --from=pre-built-war --chown=jboss:0 /opt/jboss/wildfly/customization /opt/jboss/wildfly/customization
+## Add our own bootstrap script
+COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
+
 ## Tidy up history and permissions
-RUN chmod +x ${JBOSS_HOME}/customization/execute.sh
+RUN chmod a+rx ${JBOSS_HOME}/customization/execute.sh /usr/local/bin/docker-bootstrap.sh
 USER jboss
 
 ## Setup default environment for i2b2
@@ -78,9 +81,6 @@ ENV DS_TYPE=postgres DS_IP=i2b2-database DS_PORT=5432
 ## Default login data
 ENV DS_CRC_USER=i2b2demodata DS_ONT_USER=i2b2metadata DS_PM_USER=i2b2pm DS_IM_USER=i2b2imdata DS_WD_USER=i2b2workdata DS_HIVE_USER=i2b2hive
 ENV DS_CRC_DB=i2b2demodata DS_ONT_DB=i2b2metadata DS_PM_DB=i2b2pm DS_IM_DB=i2b2imdata DS_WD_DB=i2b2workdata DS_HIVE_DB=i2b2hive
-
-## Add our own bootstrap script
-COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
 
 ## Override entrypoint for custom initialization...
 ENTRYPOINT ["docker-bootstrap.sh"]
