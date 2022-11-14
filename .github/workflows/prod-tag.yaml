@@ -51,7 +51,7 @@ jobs:
         with:
           registry: '${{ env.REGISTRY }}'
           token: "${{ env.token }}"
-          repository: '${{ github.repository }}/${{ github.event.repository.name }}-web'
+          repository: '${{ github.repository }}/i2b2-web'
           target: 'sha-${{ github.sha }}'
           tags: |
             v${{ steps.prep.outputs.version }}
@@ -61,7 +61,7 @@ jobs:
         with:
           registry: '${{ env.REGISTRY }}'
           token: "${{ env.token }}"
-          repository: '${{ github.repository }}/${{ github.event.repository.name }}-wildfly'
+          repository: '${{ github.repository }}/i2b2-wildfly'
           target: 'sha-${{ github.sha }}'
           tags: |
             v${{ steps.prep.outputs.version }}
@@ -71,7 +71,7 @@ jobs:
         with:
           registry: '${{ env.REGISTRY }}'
           token: "${{ env.token }}"
-          repository: '${{ github.repository }}/${{ github.event.repository.name }}-database'
+          repository: '${{ github.repository }}/i2b2-database'
           target: 'sha-${{ github.sha }}'
           tags: |
             v${{ steps.prep.outputs.version }}

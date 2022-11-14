@@ -33,9 +33,9 @@ jobs:
           context: ./docker/${{ github.job }}
           file: ./docker/${{ github.job }}/Dockerfile
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-latest
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-${{ github.run_number }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-latest
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:sha-${{ github.sha }}
           push: true
   wildfly:
     runs-on: ubuntu-latest
@@ -60,9 +60,9 @@ jobs:
           context: ./docker/${{ github.job }}
           file: ./docker/${{ github.job }}/Dockerfile
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-latest
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-${{ github.run_number }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-latest
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:sha-${{ github.sha }}
           push: true
   database:
     runs-on: ubuntu-latest
@@ -87,7 +87,7 @@ jobs:
           context: ./docker/${{ github.job }}
           file: ./docker/${{ github.job }}/Dockerfile
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-latest
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:build-${{ github.run_number }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ github.event.repository.name }}-${{ github.job }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-latest
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:build-${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/i2b2-${{ github.job }}:sha-${{ github.sha }}
           push: true
