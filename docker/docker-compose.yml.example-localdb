@@ -8,10 +8,10 @@ services:
     container_name:
       i2b2.web
     restart: on-failure:5
-    # image: ${IMAGE_NAMESPACE}/i2b2/i2b2-web:${I2B2_VERSION}
-    build:
-      context: ./web
-      dockerfile: Dockerfile
+    image: ${IMAGE_NAMESPACE}/i2b2-core/i2b2-web:${I2B2_VERSION}
+    # build:
+    #   context: ./web
+    #   dockerfile: Dockerfile
     ports:
       - 80:80
       - 443:443
@@ -24,10 +24,10 @@ services:
     container_name:
       i2b2.wildfly
     restart: on-failure:5
-    # image: ${IMAGE_NAMESPACE}/i2b2/i2b2-wildfly:${I2B2_VERSION}
-    build:
-      context: ./wildfly
-      dockerfile: Dockerfile
+    image: ${IMAGE_NAMESPACE}/i2b2-core/i2b2-wildfly:${I2B2_VERSION}
+    # build:
+    #   context: ./wildfly
+    #   dockerfile: Dockerfile
     ports:
       - 8080:8080
       - 9990:9990
