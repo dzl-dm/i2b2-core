@@ -25,18 +25,36 @@ It is generally recommended not to dockerize a database in a production environm
 ### Initialise the i2b2 database
 The database must contain the i2b2 structure and usually some data to provide a project making the software ready to use. For postgres, we have provided these steps as a script (to be run as root - or with su priviledge to the postgres user):
 ```sh
-cd postgres
+git clone https://github.com/dzl-dm/i2b2-core.git
+cd i2b2-core/postgres
 ./load-i2b2-structure.sh <MY DATA CHOICE>
 ```
 Where \<MY DATA CHOICE\> should be replaced with one of the following:
 1. no_project
 1. demo_empty_project
 
+### Ensure docker has access to postgres
+The i2b2 containers will try to use the host database, however by default they will likely be blocked. Here are the settings which should be changed for postgres (eg under /etc/postgresql/12/main/):
+Add to postgres.conf:
+```conf
+## Allow docker access
+listen_addresses = 'localhost, 172.17.0.1'
+```
+Add to pg_hba.conf:
+```conf
+host    all             all             172.16.0.0/12            scram-sha-256
+## OR (depending on password hashing in use!):
+host    all             all             172.16.0.0/12            md5
+```
+Restart postgres (dependant on system!):
+```sh
+service postgtesql restart
+```
+
 ### Deploy the application with docker
 Then we deploy only the application (web and wildfly components) via docker:
 ```sh
-git clone https://github.com/dzl-dm/i2b2-core.git
-cd i2b2-core/docker
+cd ../docker
 cp .env{.example-localdb,}
 cp docker-compose.yml{.example-localdb,}
 cp secrets/i2b2-secrets{.example,}
