@@ -55,7 +55,6 @@ ARG data_version_tag
 ENV data_version_tag=${data_version_tag}
 ARG DEBIAN_FRONTEND=noninteractive
 
-# USER postgres
 WORKDIR /i2b2-data
 ## Get the pg_dump files from the build stage so we can choose which to deploy
 COPY --from=i2b2-data-fetch --chmod=0644 /i2b2-data/db/* /i2b2-data/db/

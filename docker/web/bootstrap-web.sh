@@ -70,9 +70,11 @@ sed -i -re "s|(urlCellPM: ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_p
 ## Disable analysis and debugging for production
 sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
 
-# if [[ ${INCLUDE_DEMO_DATA} != "True" ]] ; then
-#     find  . -maxdepth 3 -type f -name i2b2_ui_config.js -exec sed -i 's/loginDefaultUsername : "demo"/loginDefaultUsername : ""/g' {} \; -exec sed -i 's/loginDefaultPassword : "demouser"/loginDefaultPassword : ""/g' {} \;
-# fi
+shopt -s nocasematch
+if [[ ${show_demo_login} != "true" ]] ; then
+  echo >&2 "$(date +"$df") INFO: Disabling the default demo user credentials"
+    find  . -maxdepth 3 -type f -name i2b2_ui_config.js -exec sed -i -e 's/loginDefaultUsername: "demo"/loginDefaultUsername: ""/g' -e 's/loginDefaultPassword: "demouser"/loginDefaultPassword: ""/g' {} \;
+fi
 cd -
 
 ## Now continue the startup process with the remaining ENTRYPOINT and CMD parameters
