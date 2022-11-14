@@ -1,0 +1,39 @@
+version: '3'
+
+volumes:
+  i2b2-db:
+
+services:
+  i2b2-web:
+    container_name:
+      i2b2.web
+    restart: on-failure:5
+    # image: ${IMAGE_NAMESPACE}/i2b2/i2b2-web:${I2B2_VERSION}
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+      - 443:443
+    env_file:
+      - .env
+    depends_on:
+      - i2b2-wildfly
+
+  i2b2-wildfly:
+    container_name:
+      i2b2.wildfly
+    restart: on-failure:5
+    # image: ${IMAGE_NAMESPACE}/i2b2/i2b2-wildfly:${I2B2_VERSION}
+    build:
+      context: ./wildfly
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+      - 9990:9990
+    env_file:
+      - .env
+      - ./secrets/i2b2-secrets
+    extra_hosts:
+      - "i2b2.database:${docker_host_ip:-host.docker.internal}"
+      - "i2b2-database:${docker_host_ip:-host.docker.internal}"
