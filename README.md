@@ -19,6 +19,14 @@ docker compose up -d
 ```
 After a couple of minutes (while the application starts), i2b2 will be available at: http://localhost/webclient
 
+### Demo data
+We have an option to choose the level if i2b2 data which the system is initialized with. This ranges from very minimal with no existing project, a demo project which doesn't have any data (so is ready to be filled with your own data) and a full demo project which lets you test the system without setting up any data yourself. This must be chosed before the first deployment by setting the variable `i2b2_data_level` in the `.env` file. The options are:
+1. no_project
+1. demo_empty_project
+1. demo_full_project
+
+> NOTE: If you would like to change it after the first deployment, you can do so by deleting the docker volume holding the database. This will lose all data! The command will be similar to: ``` docker volume rm docker_i2b2-db ```
+
 ## Deployment (postgres not dockerized)
 It is generally recommended not to dockerize a database in a production environment. It gives additional risk of data corruption. So we also provide a process to initialise a local postgres database.
 
@@ -32,6 +40,8 @@ cd i2b2-core/postgres
 Where \<MY DATA CHOICE\> should be replaced with one of the following:
 1. no_project
 1. demo_empty_project
+
+The option of full demo data is not available for the non-dockerized database.
 
 ### Ensure docker has access to postgres
 The i2b2 containers will try to use the host database, however by default they will likely be blocked. Here are the settings which should be changed for postgres (eg under /etc/postgresql/12/main/):
@@ -64,29 +74,23 @@ After a couple of minutes (while the application starts), i2b2 will be available
 
 #### Docker's host IP address
 > NOTE: You might need to make a change to the `.env` file.
-It is possible that your docker installation is using a different IP address then what we have provided as the default for the host system. In this case, you must edit the `docker_host_ip` variable in the `.env` file. It should be changed to the output of this command (run on the linux host):
+It is possible that your docker installation is using a different IP address than what we have provided as the default for the host system. In this case, you must edit the `docker_host_ip` variable in the `.env` file. It should be changed to the output of this command (run on the linux host):
 ```sh
 ip a | grep -A3 docker
 ```
 If you experience problems, you should remove this variable for a Windows or Mac system and let docker use its internal resolution of the `host.docker.internal` variable.
 
 ## Common adjustments
-Ok, so it works. But with a default demo user its not secure and not quite ready to use. This section outlines how to make some common changes to prepare the system for production use.
+Ok, so it works. But with default users its not secure and not quite ready to use. This section outlines how to make some common changes to prepare the system for production use.
 
 ### Change the admin user password
-There is an admin user (i2b2) which has also a default password (demouser) - its important to change this!
-1. Login via the web interface and change the password (it doesn't matter if you login to a project or the Administration interface for this)
-
-### Change the demo user password
-1. Login via the web interface and change the password
-Alternatively, you could remove the demo user
-1. Login via the web interface as an admin user (such as the default "i2b2" user)
-1. Under the "Manage Users" tree, select the user and then the delete button
+There is an admin user (i2b2) which has a default password (demouser) - its important to change this!
+1. Login via the web interface and change the password (it doesn't matter if you login to a project or the Administration interface for this).
 
 ### Change the service user password
 There is a service user (AGG_SERVICE_ACCOUNT) which has also a default password (demouser) - its important to change this!
-1. Login via the web interface and change the password
-2. Run the following SQL against your database (substitute _${newpassword}_ for the actual password)
+1. Login via the web interface and change the password.
+2. Run the following SQL against your database (substitute _${newpassword}_ for the actual password).
 ```sql
 update i2b2hive.hive_cell_params set value='${newpassword}' where param_name_cd='edu.harvard.i2b2.crc.pm.serviceaccount.password';
 ```
@@ -95,10 +99,22 @@ update i2b2hive.hive_cell_params set value='${newpassword}' where param_name_cd=
 ```sh
 docker compose restart i2b2-wildfly
 ```
-### Remove default login credentials
-Change the environment variable and redeploy the web-container:
+
+### Change the demo user password
+If you have chosen to include the demo project (with or without data), there is a demo user (demo) which has also a default password (demouser)
+1. Login via the web interface and change the password.  
+Alternatively, you could remove the demo user in the admin interface.
+1. Login via the web interface as an admin user (such as the default "i2b2" user).
+1. Under the "Manage Users" tree, select the user and then the delete button.
+
+### Show/Remove default login credentials
+Change the environment variable and redeploy the web-container (to remove):
 ```ini
-show_demo_login=My New Data Warehouse
+show_demo_login=false
+```
+or to show:
+```ini
+show_demo_login=true
 ```
 ```sh
 docker compose up -d i2b2-web
@@ -114,6 +130,6 @@ docker compose up -d i2b2-web
 ```
 
 ### Change the displayed project name
-There are multiple references to the project id, so it is safer to leave this as the default demo project, however we can easily change the displayed name in the administration interface
-1. Under "Manage Projects", select the project and change the "Project Name" field in the form, then "Save Updates"
+There are multiple references to the project id, so it is safer to leave this as the default demo project, however we can easily change the displayed name in the administration interface.
+1. Under "Manage Projects", select the project and change the "Project Name" field in the form, then "Save Updates".
 > _NOTE:_ It is not recommended to change "Project Id" or "Project Path" as they require additional, complementary, changes. You risk making the project inaccessible.
