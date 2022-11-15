@@ -61,7 +61,7 @@ COPY --from=i2b2-data-fetch --chmod=0644 /i2b2-data/db/* /i2b2-data/db/
 ## This will be run by postgres' own entrypoint to initialise the database with data
 COPY --chmod=0755 ./config/10_i2b2-setup-chooser.sh /docker-entrypoint-initdb.d/
 
-ENV i2b2_data_level=demo_empty_project
+ENV i2b2_initial_data_level=demo_empty_project
 
 ## Standard upstream entrypoint and cmd
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

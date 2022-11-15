@@ -24,7 +24,7 @@ RUN curl -o /tmp/i2b2-webclient.zip https://codeload.github.com/i2b2/i2b2-webcli
     rm -rf /tmp/i2b2-webclient*
 
 ## App defaults
-ENV ORGANISATION_NAME='Local i2b2 data warehouse'
+ENV i2b2_host_display_name='Local i2b2 data warehouse'
 ENV web_fqdn='localhost'
 ENV wildfly_scheme='http'
 ENV wildfly_url='i2b2-wildfly'

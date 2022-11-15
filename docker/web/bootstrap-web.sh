@@ -48,7 +48,7 @@ done < <(env | grep '_FILE=')
 echo >&2 "$(date +"$df") INFO: ...secrets complete"
 
 ## Map upstream ENV vars
-export APP_ID=${WEB_FQDN}
+export APP_ID=${web_fqdn}
 
 ## Setup
 echo >&2 "$(date +"$df") INFO: Configuring apache proxy to wildfly backend"
@@ -62,7 +62,7 @@ cd /var/www/html/
 cp -a webclient/index.php{,_ORIG}
 cp -a webclient/i2b2_config_data.js{,_ORIG}
 ## Display custom organisation name
-find  . -maxdepth 2 -type f -name i2b2_config_data.js -exec sed -i "s|name: \"i2b2 Demo\",|name: \"${ORGANISATION_NAME}\",|g" {} \;
+find  . -maxdepth 2 -type f -name i2b2_config_data.js -exec sed -i "s|name: \"i2b2 Demo\",|name: \"${i2b2_host_display_name}\",|g" {} \;
 ## Reference correct backend
 sed -i -re "s|([$]pmURL = ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/rest/PMService/getServices\";|" webclient/index.php
 sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_url}:${wildfly_port}\"," webclient/index.php
