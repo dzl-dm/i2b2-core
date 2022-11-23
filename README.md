@@ -92,12 +92,17 @@ There is an admin user (i2b2) which has a default password (demouser) - its impo
 ### Change the service user password
 There is a service user (AGG_SERVICE_ACCOUNT) which has also a default password (demouser) - its important to change this!
 1. Login via the web interface and change the password.
-2. Run the following SQL against your database (substitute _${newpassword}_ for the actual password).
+2. Use these commands to connect to the dockerized i2b2 database on postgres.
+```sh
+docker exec -it i2b2.database bash
+su postgres
+psql i2b2
+```
+3. Run the following SQL against your database (substitute _${newpassword}_ for the actual password).
 ```sql
 update i2b2hive.hive_cell_params set value='${newpassword}' where param_name_cd='edu.harvard.i2b2.crc.pm.serviceaccount.password';
 ```
-> __How to?__ Login to the docker database container with: ``` docker exec -it i2b2.database bash```
-3. Restart wildfly
+4. Restart wildfly - after exiting from the database container 
 ```sh
 docker compose restart i2b2-wildfly
 ```
