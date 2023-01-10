@@ -50,34 +50,109 @@ echo >&2 "$(date +"$df") INFO: ...secrets complete"
 ## Map upstream ENV vars
 export APP_ID=${web_fqdn}
 
+## Ignore case for checking parameters (eg sso_enabled)
+shopt -s nocasematch
+## Ensure variables defined so we don't have to check later
+sso_enabled=${sso_enabled:-false}
+show_demo_login=${show_demo_login:-false}
+saml_login_label=${saml_login_label:-"DZL SSO"}
+login_dropdown_label=${login_dropdown_label:-"Login method"}
+## We proxy /i2b2/ to the wildfly backend, so we can use that in configs after apache
+pmURL="http://localhost/i2b2/rest/PMService/getServices"
+
 ## Setup
-echo >&2 "$(date +"$df") INFO: Configuring apache proxy to wildfly backend"
-envsubst "\${wildfly_scheme} \${wildfly_url} \${wildfly_port} \${web_fqdn}" < /docker-config/i2b2_proxy.conf > /etc/apache2/sites-available/i2b2_proxy.conf
-a2enmod proxy
-a2ensite i2b2_proxy
+export website_scheme="http"
+[[ $ssl_proxy = "true" ]] && export website_scheme="https"
+echo >&2 "$(date +"$df") DEBUG: website_scheme set to '${website_scheme}' because ssl_proxy: ${ssl_proxy}"
+if [[ $sso_enabled == "true" ]]; then
+  echo >&2 "$(date +"$df") INFO: Configuring apache to support SSO..."
+  echo >&2 "$(date +"$df") DEBUG: sso_enabled: ${sso_enabled}"
+  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${ajp_secret} \${website_scheme}" < /docker-config/i2b2_sso.conf > /etc/apache2/sites-available/i2b2.conf
+  a2enmod proxy
+  a2enmod proxy_ajp
+  a2enmod rewrite
+  a2enmod shib
+  a2enconf shib
+  a2ensite i2b2
+  a2dissite 000-default
+else
+  echo >&2 "$(date +"$df") INFO: Configuring apache to for only local logins..."
+  echo >&2 "$(date +"$df") DEBUG: sso_enabled: ${sso_enabled}"
+  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${website_scheme}" < /docker-config/i2b2_standalone.conf > /etc/apache2/sites-available/i2b2.conf
+  a2enmod proxy
+  a2enmod rewrite
+  a2ensite i2b2
+  a2dissite 000-default
+  a2dismod shib
+  a2disconf shib
+fi
 
 ## Customisation
 echo >&2 "$(date +"$df") INFO: Customising interface..."
+echo >&2 "$(date +"$df") DEBUG: Backing up files which will be changed..."
 cd /var/www/html/
-cp -a webclient/index.php{,_ORIG}
-cp -a webclient/i2b2_config_data.js{,_ORIG}
-## Display custom organisation name
-find  . -maxdepth 2 -type f -name i2b2_config_data.js -exec sed -i "s|name: \"i2b2 Demo\",|name: \"${i2b2_host_display_name}\",|g" {} \;
+cp -a webclient/login.php{,_BAK}
+cp -a webclient/logout.php{,_BAK}
+cp -a webclient/index.php{,_BAK}
+cp -a webclient/i2b2_config_data.js{,_BAK}
+cp -a webclient/js-i2b2/i2b2_ui_config.js{,_BAK}
 ## Reference correct backend
-sed -i -re "s|([$]pmURL = ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/rest/PMService/getServices\";|" webclient/index.php
-sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_url}:${wildfly_port}\"," webclient/index.php
-sed -i -re "s|(urlCellPM: ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/services/PMService/\",|" webclient/i2b2_config_data.js
-## Disable analysis and debugging if needed (they are defaulted to enabled)
-{ [ -z ${i2b2_xml_debug} ] && [ ${i2b2_xml_debug} = 'true' ] } ||  sed -i -re 's|(debug: ).*|\1false,|g' webclient/i2b2_config_data.js
-{ [ -z ${i2b2_analysis_tools} ] && [ ${i2b2_analysis_tools} = 'true' ] } ||  sed -i -re 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
-# sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+echo >&2 "$(date +"$df") DEBUG: Setting backend to: '${pmURL}' (accessible from the web server, not user's browser)"
+sed -i -re "s|([$]pmURL[[:blank:]]*=[[:blank:]]*).*|\1\"${pmURL}\";|" webclient/index.php
+## Simply whitelist the pmURL
+# sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_host}:${wildfly_port}\"," webclient/index.php
+## Relax the regex pattern to capture the pmURL automatically (double escaping?)
+## target_regex="/(http|https)\:\/\/[a-zA-Z0-9\-\.]+(\:[0-9]{2,5})*\/?/"
+## output_regex="/(http|https)\:\/\/[a-zA-Z0-9\-\.]+(\:[0-9]{2,5})*\/?/"
+## new_regex="/\(http\|https\)\\\:\\\/\\\/\[a-zA-Z0-9\\-\\.\]\+\(\\\:\[0-9\]{2,5})\*\\/\?/\" ## <- Use directly in sed substitution
+echo >&2 "$(date +"$df") DEBUG: Setting new, relaxed regex for automatically whitelisting pmURL"
+sed -i -e 's|\(\$regex[[:blank:]]*=[[:blank:]]*\).*|\1\"/\(http\|https\)\\\:\\\/\\\/\[a-zA-Z0-9\\-\\.\]\+\(\\\:\[0-9\]{2,5})\*\\/\?/\";|g'  webclient/index.php
 
-shopt -s nocasematch
+if [[ $sso_enabled == "true" ]]; then
+  echo >&2 "$(date +"$df") DEBUG: Update config data for SSO logins"
+  envsubst "\${ORGANISATION_NAME} \${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${ajp_proxy_url}" < /docker-config/i2b2_config_data_SSO-TEMPLATE.js > webclient/i2b2_config_data.js
+else
+  echo >&2 "$(date +"$df") DEBUG: Update config data for local logins - disable SSO logins"
+  envsubst "\${ORGANISATION_NAME} \${wildfly_scheme} \${wildfly_host} \${wildfly_port}" < /docker-config/i2b2_config_data_TEMPLATE.js > webclient/i2b2_config_data.js
+  ## Load as JSON (ignoring comments) and remove federated login option - TODO: Fixing config to use JSON breaks lots of other things
+  # sed -e '/^[[:blank:]]*#/d' -e '/^[[:blank:]]*\/\//d' webclient/i2b2_config_data_TMP.js | jq 'del(.lstDomains[] | select(.loginType == "federated"))' > webclient/i2b2_config_data.js
+fi
+## Disable analysis and debugging for production
+echo >&2 "$(date +"$df") DEBUG: Disable i2b2 analysis and debugging"
+sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+## Use compatible php for the login page (ensure AssertionConsumerServiceURL uses correct scheme during saml login - the $url)
+echo >&2 "$(date +"$df") DEBUG: Update login/logout php"
+cp /docker-config/login.php webclient/login.php
+cp /docker-config/logout.php webclient/logout.php
+
 if [[ ${show_demo_login} != "true" ]] ; then
-  echo >&2 "$(date +"$df") INFO: Disabling the default demo user credentials"
+    echo >&2 "$(date +"$df") INFO: Disabling the default demo user credentials"
     find  . -maxdepth 3 -type f -name i2b2_ui_config.js -exec sed -i -e 's/loginDefaultUsername: "demo"/loginDefaultUsername: ""/g' -e 's/loginDefaultPassword: "demouser"/loginDefaultPassword: ""/g' {} \;
 fi
+## Musing: what if there is a comma/escaped quote in the variable? Why not use real JSON so we can use jq!?
+sed -i -e "s/\(loginIdp[[:blank:]]*:[[:blank:]]*\"\).*\(\".*\)/\1${saml_login_label}\2/g" -e "s/\(loginHostText[[:blank:]]*:[[:blank:]]*\).*\(,.*\)/\1\"${login_dropdown_label}\"\2/g" webclient/js-i2b2/i2b2_ui_config.js
 cd -
+
+if [[ $sso_enabled == "true" ]]; then
+  echo >&2 "$(date +"$df") INFO: Configuring shibboleth and apache for SSO..."
+  cp -a /etc/shibboleth/shibboleth2.xml{,_BAK}
+  envsubst "\${app_entity_id} \${sso_entity_id} \${handle_ssl} \${admin_email}" < /docker-config/shibboleth/shibboleth2_TEMPLATE.xml > /etc/shibboleth/shibboleth2.xml
+  ## No environmental config required
+  cp /docker-config/shibboleth/attribute-map.xml /etc/shibboleth/
+  ## Check for precence of shibboleth data
+  if [[ ! -f "/etc/shibboleth/idp-metadata.xml" ]] ; then
+      echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/idp-metadata.xml' is provided (perhaps via a docker mount?)"
+  fi
+  if [[ ! -f "/etc/shibboleth/sp-signing-cert.pem" ]] ; then
+      echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/sp-signing-cert.pem' is provided (perhaps via a docker mount?)"
+  fi
+  if [[ ! -f "/etc/shibboleth/sp-signing-key.pem" ]] ; then
+      echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/sp-signing-key.pem' is provided (perhaps via a docker mount?)"
+  fi
+
+  echo >&2 "$(date +"$df") INFO: Starting shibboleth daemon..."
+  service shibd start
+fi
 
 ## Now continue the startup process with the remaining ENTRYPOINT and CMD parameters
 sleep 1 ## Let commands complete (eg a2enmod)
