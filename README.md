@@ -3,7 +3,7 @@ Dockerization of the software provided by Harvard University: https://www.i2b2.o
 
 ## Deployment (Fully dockerized)
 > __NOTE:__ I2B2 do provide their own docker images for the i2b2 system. You can find the images and example compose files under these links:  
-https://hub.docker.com/u/i2b2/#!  
+https://hub.docker.com/u/i2b2/#  
 https://github.com/i2b2/i2b2-docker  
 
 We aim to improve the flexibility and make it even easier to get up and running with i2b2.
@@ -12,9 +12,9 @@ To get started with our deployment, we recommend cloning this repo, making any d
 ```sh
 git clone https://github.com/dzl-dm/i2b2-core.git
 cd i2b2-core/docker
-cp .env{.example,}
-cp docker-compose.yml{.example,}
-cp secrets/i2b2-secrets{.example,}
+cp .env.example .env
+cp docker-compose.yml.example docker-compose.yml
+cp secrets/i2b2-secrets.example secrets/i2b2-secrets
 docker compose up -d
 ```
 After a couple of minutes (while the application starts), i2b2 will be available at: http://localhost/webclient
@@ -110,6 +110,7 @@ docker compose restart i2b2-wildfly
 ### Change the demo user password
 If you have chosen to include the demo project (with or without data), there is a demo user (demo) which has also a default password (demouser)
 1. Login via the web interface and change the password.  
+
 Alternatively, you could remove the demo user in the admin interface.
 1. Login via the web interface as an admin user (such as the default "i2b2" user).
 1. Under the "Manage Users" tree, select the user and then the delete button.
@@ -149,11 +150,72 @@ There are multiple references to the project id, so it is safer to leave this as
 1. Under "Manage Projects", select the project and change the "Project Name" field in the form, then "Save Updates".
 > _NOTE:_ It is not recommended to change "Project Id" or "Project Path" as they require additional, complementary, changes. You risk making the project inaccessible.
 
+### Enable SAML logins
+Since version 1.7.13, i2b2 has included some support for SAML authentication allowing deployment in a Single-Sign-On (SSO) infrastructure. It is not possible to integrate this completely into the docker images, there are some steps which must be completed manually or by infrastructure management systems. I2b2's own documentation for SAML is [here](https://community.i2b2.org/wiki/pages/viewpage.action?pageId=55706050)
+
+#### Pre-requisites  
+* An identity provider (IDP), such as [KeyCloak](https://www.keycloak.org/) (We will use some examples related to KeyCloak, so terminology may reflect this, but another provider can be used instead)
+* An HTTPS proxy for i2b2 (We also provide this possibility under our [docker compositions](https://github.com/dzl-dm/dwh-compositions) repository)
+
+Now we can configure i2b2 as the Service Provider (SP)
+
+#### Retrieve data from the IDP  
+* Place the following 3 files in a sub-directory (named external-config) where your `docker-compose.yml` file is:
+    * i2b2-idp-metadata.xml (See: https://<IDP_HOSTNAME>/realms/<MY_REALM>/protocol/saml/descriptor)
+    * i2b2-sso-t1-cert.pem
+    * i2b2-sso-t1-key.pem
+
+The certificate and key can be found in the "Client details" (for the client which you have setup for i2b2) area under the "Keys" tab. Here you can export and choose your format (eg PCKS12). Then the cert and key must be extracted and presented in "pem" format.
+
+These files are mounted by the docker container based on the directives in `docker-compose.yml`. You must adjust this if you would like to deploy differently.
+
+#### Add users to i2b2  
+I2b2 must have the user setup in its admin interface in order to give it permissions such as access to the project data. After logging in as an admin (eg local user "ib22"), you can use the interface to add a user. The requirements to make the user work via SAML are:
+* Match the username with the IDP
+* Add the parameter: "authentication_method"="SAML"
+
+The password field is irrelevant, once the above parameter is set, the user will not be able to login locally, however the interface requires a password to be set
+
+The user must also be added to a project in order to see any data. This can also be done via the interface in the same way as local users.
+
+#### Adjust the database configuration  
+There is a change in the configuration stored in the database. Whether a new deployment or upgrading an existing deployment, you must ensure these settings are correct.
+
+Connect to your i2b2 server, then login to the database container (if running the database in docker):
+```sh
+docker exec -it i2b2.database bash
+```
+
+Get an SQL console as the postgres user:
+```sh
+su - postgres
+psql i2b2
+```
+
+View the settings
+```sql
+SELECT * FROM i2b2pm.pm_cell_data;
+```
+
+Change the settings
+```sql
+-- Due to the use of AJP with saml, this should be localhost, not the wildfly container/hostname
+UPDATE i2b2pm.pm_cell_data SET url = 'http://127.0.0.1/i2b2/services/QueryToolService/' WHERE cell_id  = 'CRC';
+UPDATE i2b2pm.pm_cell_data SET url = 'http://127.0.0.1/i2b2/services/FRService/' WHERE cell_id  = 'FRC';
+UPDATE i2b2pm.pm_cell_data SET url = 'http://127.0.0.1/i2b2/services/OntologyService/' WHERE cell_id  = 'ONT';
+UPDATE i2b2pm.pm_cell_data SET url = 'http://127.0.0.1/i2b2/services/WorkplaceService/' WHERE cell_id  = 'WORK';
+UPDATE i2b2pm.pm_cell_data SET url = 'http://127.0.0.1/i2b2/services/IMService/' WHERE cell_id  = 'IM';
+```
+
 ## Troubleshooting
 As with most software and systems, things can go wrong, or at least appear to. Here we outline some errors and problems which we have encountered.
 
 ### Tools
 What can you do to see what's going wrong? Here are a few useful tools
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4604f25 (Changes to support SAML SSO)
 #### Docker logs
 For each component, you can view and follow the logs:
 ```sh

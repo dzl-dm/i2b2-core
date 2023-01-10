@@ -52,25 +52,30 @@ export APP_ID=${web_fqdn}
 
 ## Setup
 echo >&2 "$(date +"$df") INFO: Configuring apache proxy to wildfly backend"
-envsubst "\${wildfly_scheme} \${wildfly_url} \${wildfly_port} \${web_fqdn}" < /docker-config/i2b2_proxy.conf > /etc/apache2/sites-available/i2b2_proxy.conf
+envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${ajp_secret}" < /docker-config/i2b2.conf > /etc/apache2/sites-available/i2b2.conf
 a2enmod proxy
-a2ensite i2b2_proxy
+a2enmod proxy_ajp
+a2ensite i2b2
+a2dissite 000-default
 
 ## Customisation
 echo >&2 "$(date +"$df") INFO: Customising interface..."
 cd /var/www/html/
+cp -a webclient/login.php{,_ORIG}
 cp -a webclient/index.php{,_ORIG}
 cp -a webclient/i2b2_config_data.js{,_ORIG}
 ## Display custom organisation name
 find  . -maxdepth 2 -type f -name i2b2_config_data.js -exec sed -i "s|name: \"i2b2 Demo\",|name: \"${i2b2_host_display_name}\",|g" {} \;
 ## Reference correct backend
-sed -i -re "s|([$]pmURL = ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/rest/PMService/getServices\";|" webclient/index.php
-sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_url}:${wildfly_port}\"," webclient/index.php
-sed -i -re "s|(urlCellPM: ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/services/PMService/\",|" webclient/i2b2_config_data.js
-## Disable analysis and debugging if needed (they are defaulted to enabled)
-{ [ -z ${i2b2_xml_debug} ] && [ ${i2b2_xml_debug} = 'true' ] } ||  sed -i -re 's|(debug: ).*|\1false,|g' webclient/i2b2_config_data.js
-{ [ -z ${i2b2_analysis_tools} ] && [ ${i2b2_analysis_tools} = 'true' ] } ||  sed -i -re 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
-# sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+sed -i -re "s|([$]pmURL = ).*|\1\"${wildfly_scheme}://${wildfly_host}:${wildfly_port}/i2b2/rest/PMService/getServices\";|" webclient/index.php
+sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_host}:${wildfly_port}\"," webclient/index.php
+# sed -i -re "s|(urlCellPM: ).*|\1\"${wildfly_scheme}://${wildfly_host}:${wildfly_port}/i2b2/services/PMService/\",|" webclient/i2b2_config_data.js
+envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${ajp_proxy_url}" < /docker-config/i2b2_config_data_TEMPLATE.js > webclient/i2b2_config_data.js
+## Disable analysis and debugging for production
+sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+## Use compatible php for the login page (ensure AssertionConsumerServiceURL uses correct scheme)
+cp /docker-config/login.php webclient/login.php
+cp /docker-config/logout.php webclient/logout.php
 
 shopt -s nocasematch
 if [[ ${show_demo_login} != "true" ]] ; then
@@ -78,6 +83,26 @@ if [[ ${show_demo_login} != "true" ]] ; then
     find  . -maxdepth 3 -type f -name i2b2_ui_config.js -exec sed -i -e 's/loginDefaultUsername: "demo"/loginDefaultUsername: ""/g' -e 's/loginDefaultPassword: "demouser"/loginDefaultPassword: ""/g' {} \;
 fi
 cd -
+
+echo >&2 "$(date +"$df") INFO: Configuring shibboleth and apache for SSO..."
+cp -a /etc/shibboleth/shibboleth2.xml{,_ORIG}
+envsubst "\${app_entity_id} \${sso_entity_id} \${handle_ssl} \${admin_email}" < /docker-config/shibboleth/shibboleth2_TEMPLATE.xml > /etc/shibboleth/shibboleth2.xml
+## No environmental config required
+cp /docker-config/shibboleth/attribute-map.xml /etc/shibboleth/
+## Check for precence of shibboleth data
+if [! -f "/etc/shibboleth/idp-metadata.xml" ] ; then
+     echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/idp-metadata.xml' is provided (perhaps via a docker mount?)"
+fi
+if [! -f "/etc/shibboleth/sp-signing-cert.pem" ] ; then
+     echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/sp-signing-cert.pem' is provided (perhaps via a docker mount?)"
+fi
+if [! -f "/etc/shibboleth/sp-signing-key.pem" ] ; then
+     echo >&2 "$(date +"$df") ERROR: Please ensure '/etc/shibboleth/sp-signing-key.pem' is provided (perhaps via a docker mount?)"
+fi
+
+echo >&2 "$(date +"$df") INFO: Starting shibboleth daemon..."
+sleep 1 ## Let commands complete (eg a2enmod)
+service shibd start
 
 ## Now continue the startup process with the remaining ENTRYPOINT and CMD parameters
 sleep 1 ## Let commands complete (eg a2enmod)

@@ -89,7 +89,7 @@ function create_oracle_ds() {
 
 
 echo "=> Assigning defaults for unspecified variables"
-DEBUG_ENABLED="false"
+DEBUG_ENABLED=${DEBUG_ENABLED:-false}
 case ${DS_TYPE} in
   "mssql")
     DEFAULT_DS_PORT="1433"
