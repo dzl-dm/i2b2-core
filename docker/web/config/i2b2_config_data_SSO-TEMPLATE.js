@@ -5,6 +5,17 @@
     //-------------------------------------------------------------------------------------------
     // THESE ARE ALL THE DOMAINS A USER CAN LOGIN TO
     lstDomains: [
+           {
+                   name: "${ORGANISATION_NAME} (Single Sign-On)",
+                   domain: "i2b2demo",
+                   urlCellPM: "${ajp_proxy_url}",
+                   allowAnalysis: false,
+                   registrationMethod: "saml",
+                   loginType: "federated",
+                   showRegistration: false,
+                   debug: false
+           }
+           ,
             {
                    name: "${ORGANISATION_NAME}",
                    domain: "i2b2demo",
