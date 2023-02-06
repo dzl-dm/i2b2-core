@@ -15,6 +15,10 @@ services:
     ports:
       - 80:80
       - 443:443
+    volumes:
+      - ./external-config/i2b2-sp-cert.pem:/etc/shibboleth/sp-signing-cert.pem
+      - ./external-config/i2b2-sp-key.pem:/etc/shibboleth/sp-signing-key.pem
+      - ./external-config/i2b2-idp-metadata.xml:/etc/shibboleth/idp-metadata.xml
     env_file:
       - .env
     depends_on:
