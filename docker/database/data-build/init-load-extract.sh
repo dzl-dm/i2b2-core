@@ -89,7 +89,9 @@ sed -i 's/public/i2b2workdata/' work_db_lookup_postgresql_insert_data.sql
 sed -i 's/public/i2b2metadata/' ont_db_lookup_postgresql_insert_data.sql
 sed -i 's/public/i2b2demodata/' crc_db_lookup_postgresql_insert_data.sql
 cd ../../Pmdata/scripts/demo
+## Change URL references to cells - it should be proxied via apache and is called from the server-side web component
 sed -i 's/localhost:9090/i2b2-wildfly:8080/' pm_access_insert_data.sql
+# sed -i 's/localhost:9090/localhost/' pm_access_insert_data.sql
 cd /tmp/i2b2-data-1.7.13.0002/edu.harvard.i2b2.data/Release_1-7/NewInstall
 sleep 0.1
 ant -f build.xml create_database

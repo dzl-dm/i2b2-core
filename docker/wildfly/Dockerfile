@@ -49,6 +49,7 @@ FROM debian:11-slim
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt install -y --no-install-recommends \
+    gettext-base \
     openjdk-11-jre && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -67,36 +68,26 @@ ENV JBOSS_HOME=${JBOSS_HOME:-/opt/jboss/wildfly}
 ## Add wildfly from the build stage
 ARG wildfly_version
 COPY --from=build-i2b2-core --chown=jboss:0 /tmp/wildfly-${wildfly_version} ${JBOSS_HOME}
-RUN mkdir -p ${JBOSS_HOME}/customization ${JBOSS_HOME}/standalone ${JBOSS_HOME}/modules && \
-    cd /usr/lib/jvm/ && \
-    ln -s java-11-openjdk-amd64 jre && \
-    chown -R jboss:0 ${JBOSS_HOME} && \
-    chmod -R g+rw ${JBOSS_HOME} && \
-    chmod -R g+rwX ${JBOSS_HOME}/standalone ${JBOSS_HOME}/modules
+RUN cd /usr/lib/jvm/ && \
+    ln -s java-11-openjdk-amd64 jre
+USER jboss
+RUN mkdir -p ${JBOSS_HOME}/customization ${JBOSS_HOME}/standalone ${JBOSS_HOME}/modules
 
 ENV LAUNCH_JBOSS_IN_BACKGROUND=true
-EXPOSE 8080
+## Allow connections for authentication (over AJP) and the application (over http)
+EXPOSE 8009 8080
 
 ## Add i2b2.war and jdbc driver(s) from the build stage
 COPY --from=build-i2b2-core --chown=jboss:0 /tmp/i2b2-core-server/edu.harvard.i2b2.server-common/dist/i2b2.war  /opt/jboss/wildfly/customization/
 COPY --from=build-i2b2-core --chown=jboss:0 /tmp/i2b2-core-server/edu.harvard.i2b2.server-common/lib/jdbc/postgresql*.jar /opt/jboss/wildfly/customization/
+## Add the execute.sh which i2b2 use in their docker image (must pull image and extract)
+COPY ./config/execute.sh ${JBOSS_HOME}/customization/execute.sh
+
+USER root
 ## Add our own bootstrap script
 COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
-## ...and the execute.sh which i2b2 use in their docker image
-COPY ./config/execute.sh ${JBOSS_HOME}/customization/execute.sh
-## ...and the execute.sh which i2b2 use in their docker image
+## Add a templated config file for i2b2
 COPY ./config/standalone_TEMPLATE.xml /docker-config/
-
-## Tidy up history and permissions
-RUN chmod a+rx ${JBOSS_HOME}/customization/execute.sh /usr/local/bin/docker-bootstrap.sh
-# USER jboss
-
-## Install envsubst tool for configuration
-RUN apt update && \
-    apt install -y --no-install-recommends \
-    gettext-base && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
 ## Setup default environment for i2b2
 ENV jdbc_pg_driver_version=42.2.8 jdbc_pg_driver_download_url=https://jdbc.postgresql.org/download/postgresql-.jar
