@@ -19,7 +19,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /i2b2-data
-## Fetch the i2b2 data
+## Fetch the i2b2 data ~500MB
 RUN cd /tmp && \
     curl -ko ./i2b2-data.tar.gz https://codeload.github.com/i2b2/i2b2-data/tar.gz/refs/tags/v${data_version_tag} && \
     tar xzf ./i2b2-data.tar.gz && \

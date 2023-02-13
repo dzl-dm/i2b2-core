@@ -68,6 +68,8 @@ if [[ $sso_enabled == "true" ]]; then
   a2enmod proxy
   a2enmod proxy_ajp
   a2enmod rewrite
+  a2enmod shib
+  a2enconf shib
   a2ensite i2b2
   a2dissite 000-default
 else
@@ -78,6 +80,8 @@ else
   a2enmod rewrite
   a2ensite i2b2
   a2dissite 000-default
+  a2dismod shib
+  a2disconf shib
 fi
 
 ## Customisation
