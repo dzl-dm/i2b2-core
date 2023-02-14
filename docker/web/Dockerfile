@@ -37,7 +37,7 @@ COPY --from=download-web --chown=0:0 /tmp/webclient /var/www/html/webclient
 COPY ./assets/favicon.ico /var/www/html/
 ## Add our configs
 COPY ./config /docker-config/
-COPY ./bootstrap-web.sh /usr/local/bin/docker-bootstrap.sh
+COPY --chmod=0755 ./bootstrap-web.sh /usr/local/bin/docker-bootstrap.sh
 
 ## System env
 ENV TZ=${TZ:-'Europe/Berlin'}

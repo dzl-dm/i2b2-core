@@ -81,11 +81,11 @@ EXPOSE 8009 8080
 COPY --from=build-i2b2-core --chown=jboss:0 /tmp/i2b2-core-server/edu.harvard.i2b2.server-common/dist/i2b2.war  /opt/jboss/wildfly/customization/
 COPY --from=build-i2b2-core --chown=jboss:0 /tmp/i2b2-core-server/edu.harvard.i2b2.server-common/lib/jdbc/postgresql*.jar /opt/jboss/wildfly/customization/
 ## Add the execute.sh which i2b2 use in their docker image (must pull image and extract)
-COPY ./config/execute.sh ${JBOSS_HOME}/customization/execute.sh
+COPY --chmod=0755 ./config/execute.sh ${JBOSS_HOME}/customization/execute.sh
 
 USER root
 ## Add our own bootstrap script
-COPY ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
+COPY --chmod=0755 ./bootstrap-wildfly.sh /usr/local/bin/docker-bootstrap.sh
 ## Add a templated config file for i2b2
 COPY ./config/standalone_TEMPLATE.xml /docker-config/
 
