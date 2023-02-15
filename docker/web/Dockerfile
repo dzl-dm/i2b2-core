@@ -57,6 +57,7 @@ ENV sso_entity_id='http://localhost/idp'
 ## Proxy will handle ssl, not us
 ENV handle_ssl='false'
 ENV admin_email='noreply@example.com'
+ENV ssl_proxy='false'
 
 ## Override entrypoint for custom initialisation...
 ENTRYPOINT ["docker-bootstrap.sh", "docker-php-entrypoint"]
