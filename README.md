@@ -206,6 +206,11 @@ ajp_secret=<RANDOM KEY>
 ```
 ...where you could use a password generator for the random key.
 
+It is also important to define if the website is using https or not so that i2b2 can send the correct redirect address to the IDP. We use an environment variable for this:
+```ini
+ssl_proxy=true
+```
+
 #### Re-deploy the application
 In order for the changes to take effect, you must re-deploy the `Web component` of i2b2 at minimum. You can do this with:
 ```sh

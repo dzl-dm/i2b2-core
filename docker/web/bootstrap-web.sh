@@ -61,10 +61,13 @@ login_dropdown_label=${login_dropdown_label:-"Login method"}
 pmURL="http://localhost/i2b2/rest/PMService/getServices"
 
 ## Setup
+export website_scheme="http"
+[[ $ssl_proxy = "true" ]] && export website_scheme="https"
+echo >&2 "$(date +"$df") DEBUG: website_scheme set to '${website_scheme}' because ssl_proxy: ${ssl_proxy}"
 if [[ $sso_enabled == "true" ]]; then
   echo >&2 "$(date +"$df") INFO: Configuring apache to support SSO..."
   echo >&2 "$(date +"$df") DEBUG: sso_enabled: ${sso_enabled}"
-  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${ajp_secret}" < /docker-config/i2b2_sso.conf > /etc/apache2/sites-available/i2b2.conf
+  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${ajp_secret} \${website_scheme}" < /docker-config/i2b2_sso.conf > /etc/apache2/sites-available/i2b2.conf
   a2enmod proxy
   a2enmod proxy_ajp
   a2enmod rewrite
@@ -75,7 +78,7 @@ if [[ $sso_enabled == "true" ]]; then
 else
   echo >&2 "$(date +"$df") INFO: Configuring apache to for only local logins..."
   echo >&2 "$(date +"$df") DEBUG: sso_enabled: ${sso_enabled}"
-  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn}" < /docker-config/i2b2_standalone.conf > /etc/apache2/sites-available/i2b2.conf
+  envsubst "\${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${web_fqdn} \${website_scheme}" < /docker-config/i2b2_standalone.conf > /etc/apache2/sites-available/i2b2.conf
   a2enmod proxy
   a2enmod rewrite
   a2ensite i2b2
