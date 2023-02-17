@@ -156,10 +156,10 @@ There are multiple references to the project id, so it is safer to leave this as
 > _NOTE:_ It is not recommended to change "Project Id" or "Project Path" as they require additional, complementary, changes. You risk making the project inaccessible.
 
 ### Enable SAML SSO logins
-Since version 1.7.13, i2b2 has included some support for SAML authentication allowing deployment in a Single-Sign-On (SSO) infrastructure. It is not possible to integrate this completely into the docker images, there are some steps which must be completed manually or by infrastructure management systems. I2b2's own documentation for SAML is [here](https://community.i2b2.org/wiki/pages/viewpage.action?pageId=55706050)
+Since version 1.7.13, i2b2 has included some support for SAML authentication allowing deployment in a Single-Sign-On (SSO) infrastructure. It is not possible to integrate this completely into the docker images, there are some steps which must be completed manually or by infrastructure management systems. I2b2's own documentation for SAML is [here](https://community.i2b2.org/wiki/pages/viewpage.action?pageId=55706050). We have made this toggleable via environment variables since version v1.7.13-3. You would not need to clone a new repository or use new docker images if you are already runnning this version or higher.
 
 #### Pre-requisites  
-* An identity provider (IDP), such as [KeyCloak](https://www.keycloak.org/) (We will use some examples related to KeyCloak, so terminology may reflect this, but another provider can be used instead)
+* An IDentity Provider (IDP), such as [KeyCloak](https://www.keycloak.org/) (We will use some examples related to KeyCloak, so terminology may reflect this, but another provider can be used instead)
 * An HTTPS proxy for i2b2 (We also provide this possibility under our [docker compositions](https://github.com/dzl-dm/dwh-compositions) repository)
 
 Now we can configure i2b2 as the Service Provider (SP)
@@ -167,18 +167,18 @@ Now we can configure i2b2 as the Service Provider (SP)
 #### Retrieve data from the IDP  
 * Place the following 3 files in a sub-directory (named `external-config`) where your `docker-compose.yml` file is:
     * i2b2-idp-metadata.xml (See: https://<IDP_HOSTNAME>/realms/<MY_REALM>/protocol/saml/descriptor)
-    * i2b2-sso-t1-cert.pem
-    * i2b2-sso-t1-key.pem
+    * i2b2-sp-cert.pem
+    * i2b2-sp-key.pem
 
-> _NOTE:_ See the [KeyCloak mini-guide](KeyCloakMiniGuide.md) for some help on how to retrieve these files.
+> _NOTE:_ Contact your IDP admin or see the [KeyCloak mini-guide](KeyCloakMiniGuide.md) for some help on how to retrieve these files.
 
 These files are mounted by the docker container based on the directives in `docker-compose.yml`. You must adjust this if you would like to deploy differently. Please un-comment the corresponding lines:
 ```yaml
 services:
   i2b2-web:
     volumes:
-      - ./external-config/i2b2-sso-t1-cert.pem:/etc/shibboleth/sp-signing-cert.pem
-      - ./external-config/i2b2-sso-t1-key.pem:/etc/shibboleth/sp-signing-key.pem
+      - ./external-config/i2b2-sp-cert.pem:/etc/shibboleth/sp-signing-cert.pem
+      - ./external-config/i2b2-sp-key.pem:/etc/shibboleth/sp-signing-key.pem
       - ./external-config/i2b2-idp-metadata.xml:/etc/shibboleth/idp-metadata.xml
 ```
 
@@ -186,10 +186,17 @@ services:
 I2b2 must have the user setup in its admin interface in order to give it permissions such as access to the project data. After logging in as an admin (eg local user "i2b2"), you can use the interface to add a user. The requirements to make the user work via SAML are:
 * Match the username with the IDP
 * Add the parameter: "authentication_method"="SAML"
+  * Data type should remain as default: "Text"
 
 The password field is irrelevant, once the above parameter is set, the user will not be able to login locally, however the interface requires a password to be set.
 
 The user must also be added to a project in order to see any data. This can also be done via the interface in the same way as local users.
+
+#### Check your i2b2_version
+We have integrated the SSO option since `v1.7.13-3`. Please make sure you have this version or higher set in your `.env` file. eg:
+```ini
+I2B2_VERSION=v1.7.13-3
+```
 
 #### Final environment configs
 We utilize the following environment variables to setup most of the SSO configuration, the must be set as described below:
@@ -198,7 +205,9 @@ sso_enabled=true
 sso_entity_id='https://<idp-hostname>/realms/<myrealm>'
 app_entity_id='https://<app-hostname>/saml-sp'
 ```
-...where you should receive the `<variables>` from your KeyCloak admin team (or see the [KeyCloak mini-guide](KeyCloakMiniGuide.md) if you are the admin!)
+...where you should receive the `<variables>` (or the entire *_entity_id value) from your IDP admin team (or see the [KeyCloak mini-guide](KeyCloakMiniGuide.md) if you are the admin!)
+
+> _NOTE:_ Sometimes the variable names from the IDP will not match exactly, but they should be similar enough to match up.
 
 There is also a sensitive key which must be set to secure the AJP communication between the web and wildfly components of i2b2. We recommend this be set in the `i2b2-secrets` file for clearer separation of sensitive data:
 ```ini
@@ -215,6 +224,9 @@ ssl_proxy=true
 In order for the changes to take effect, you must re-deploy the `Web component` of i2b2 at minimum. You can do this with:
 ```sh
 docker compose up -d i2b2-web
+## NOTE: If you are upgrading from a version which did not support SSO, you must also re-deply the other containers:
+docker compose pull
+docker compose up -d --force-recreate
 ```
 Re-deploying docker containers does not destroy any data relevant for i2b2 as that is all stored in the database externally or in a volume. Configuration data is also not lost as it is either configured at runtime by scripts or mounted as files.
 
@@ -222,7 +234,7 @@ Re-deploying docker containers does not destroy any data relevant for i2b2 as th
 As with most software and systems, things can go wrong, or at least appear to. Here we outline some errors and problems which we have encountered.
 
 ### Tools
-What can you do to see what's going wrong? Here are a few useful tools
+What can you do to see what's going wrong? Here are a few useful tools.
 
 #### Docker logs
 For each component, you can view and follow the logs:
