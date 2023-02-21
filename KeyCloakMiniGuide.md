@@ -6,6 +6,11 @@ Here, we do not aim to document KeyCloak in depth, only provide some rough instr
 * A basic understanding of SSO principles (eg IDP and SP)
 * A basic understanding of realms
 
+## Performance requirements
+Although these vary greatly based on usage, here is a rough idea of minimum requirements with no active usage:
+* CPU: Low
+* Memory: ~350MB
+
 ## Setup an i2b2 client on KeyCloak
 This is a brief guide to setup the "client" on KeyCloak to be compatible with i2b2. You may apply this in an existing realm or new realm depending on your preference.
 
