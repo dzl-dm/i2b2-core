@@ -7,6 +7,13 @@ https://github.com/i2b2/i2b2-docker
 
 We aim to improve the flexibility and make it even easier to get up and running with i2b2.
 
+## Performance requirements
+Although these vary greatly based on usage, here is a rough idea of minimum requirements with no active usage:
+* CPU: Low
+* Memory: ~1GB for all 3 components
+
+Memory usage will naturally need to be increased for an active system. Additional CPU power will maintain responsiveness with increased activity from users.
+
 ## Deployment (Fully dockerized)
 This includes deployment of a dockerized database (postgres) which reduces the workload to have a running system, but it is usually preferred to run a database directly on the host server in production systems - see "Deployment (postgres not dockerized)" below
 
