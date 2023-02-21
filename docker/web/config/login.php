@@ -1,11 +1,11 @@
 <?php
 
-$script = filter_input(INPUT_SERVER, 'SCRIPT_FILENAME', FILTER_UNSAFE_RAW);
-$https = filter_input(INPUT_SERVER, 'HTTPS', FILTER_UNSAFE_RAW);
-$request_scheme = filter_input(INPUT_SERVER, 'REQUEST_SCHEME', FILTER_UNSAFE_RAW);
-$hostname = filter_input(INPUT_SERVER, 'SERVER_NAME', FILTER_UNSAFE_RAW);
-$requestUri = filter_input(INPUT_SERVER, 'REQUEST_URI', FILTER_UNSAFE_RAW);
-$shib_handler = filter_input(INPUT_SERVER, 'AJP_Shib-Handler', FILTER_UNSAFE_RAW);
+$script = filter_input(INPUT_SERVER, 'SCRIPT_FILENAME', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+$https = filter_input(INPUT_SERVER, 'HTTPS', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+$request_scheme = filter_input(INPUT_SERVER, 'REQUEST_SCHEME', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+$hostname = filter_input(INPUT_SERVER, 'SERVER_NAME', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+$requestUri = filter_input(INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+$shib_handler = filter_input(INPUT_SERVER, 'AJP_Shib-Handler', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
 $scriptFilename = basename($script);
 $path = str_replace($scriptFilename, '', $requestUri);
