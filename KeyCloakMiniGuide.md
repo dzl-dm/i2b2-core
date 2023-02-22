@@ -25,7 +25,7 @@ In your realm, select "Clients" from the left sidebar and begin by choosing "Cre
     * Home URL: Should be the full application address (eg https://my-application.example.com/webclient/)
     * Master SAML Processing URL: Same as "Home URL"
 * Under the "Keys" tab, there is nothing to change, but you will want to export the data for use in the application config (see below)
-* Under the "Client scopes" tab, there should be a `<client-id>-dedicated` scope, we must configure the parameter mappings here
+* Under the "Client scopes" tab, there should be a `<client-id>-dedicated` scope. We must configure the parameter mappings, here is a good place to do so
     * Configure new mapper/Add mapper -> By configuration for each parameter:
     * username -> User Property
         * Name: username
@@ -69,6 +69,16 @@ In your realm, select "Clients" from the left sidebar and begin by choosing "Cre
         * SAML Attribute Name: eduPersonAffiliation
         * Property: Basic
         * Attribute value: PA
+* Configure logout redirects
+    * Under the "Advanced" tab for the client, the following field should be set:
+        * Assertion Consumer Service POST Binding URL: https://<APPLICATION_URL>/Shibboleth.sso/SAML2/POST
+        * Logout Service POST Binding URL: https://<APPLICATION_URL>/Shibboleth.sso/SLO/POST
+        * Logout Service Redirect Binding URL: https://<APPLICATION_URL>/Shibboleth.sso/SLO/Redirect
+        * Artifact Binding URL: https://<APPLICATION_URL>/Shibboleth.sso/SAML2/Artifact
+        * Artifact Resolution Service: https://<APPLICATION_URL>/Shibboleth.sso/Artifact/SOAP
+    * An alternative is to generate the XML metadata from the client
+        * This can then be used as a manual reference or to configure a KeyCloak client from a metadata file
+        * You can find it under: https://<APPLICATION_URL>/Shibboleth.sso/Metadata
 
 Then the KeyCloak system should be ready to receive SAML login requests from i2b2.
 
