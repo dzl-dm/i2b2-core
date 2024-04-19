@@ -67,8 +67,10 @@ find  . -maxdepth 2 -type f -name i2b2_config_data.js -exec sed -i "s|name: \"i2
 sed -i -re "s|([$]pmURL = ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/rest/PMService/getServices\";|" webclient/index.php
 sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_url}:${wildfly_port}\"," webclient/index.php
 sed -i -re "s|(urlCellPM: ).*|\1\"${wildfly_scheme}://${wildfly_url}:${wildfly_port}/i2b2/services/PMService/\",|" webclient/i2b2_config_data.js
-## Disable analysis and debugging for production
-sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+## Disable analysis and debugging if needed (they are defaulted to enabled)
+{ [ -z ${i2b2_xml_debug} ] && [ ${i2b2_xml_debug} = 'true' ] } ||  sed -i -re 's|(debug: ).*|\1false,|g' webclient/i2b2_config_data.js
+{ [ -z ${i2b2_analysis_tools} ] && [ ${i2b2_analysis_tools} = 'true' ] } ||  sed -i -re 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
+# sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
 
 shopt -s nocasematch
 if [[ ${show_demo_login} != "true" ]] ; then

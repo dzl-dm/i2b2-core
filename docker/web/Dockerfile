@@ -30,6 +30,8 @@ ENV wildfly_scheme='http'
 ENV wildfly_url='i2b2-wildfly'
 ENV wildfly_port='8080'
 ENV show_demo_login='false'
+ENV i2b2_xml_debug='false'
+ENV i2b2_analysis_tools='true'
 
 COPY ./assets/favicon.ico /var/www/html/
 
