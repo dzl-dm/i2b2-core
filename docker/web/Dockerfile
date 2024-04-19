@@ -8,8 +8,10 @@ FROM alpine as download-web
 ARG i2b2_version
 RUN apk add curl unzip
 
+## web component has received a "refresh", so this is called "classic" now
 # ADD https://codeload.github.com/i2b2/i2b2-webclient/zip/refs/tags/v1.7.13.0002 ~32mb
-RUN curl -o /tmp/i2b2-webclient.zip https://codeload.github.com/i2b2/i2b2-webclient/zip/refs/tags/v${i2b2_version} && \
+# RUN curl -o /tmp/i2b2-webclient.zip https://codeload.github.com/i2b2/i2b2-webclient/zip/refs/tags/v${i2b2_version} && \
+RUN curl -o /tmp/i2b2-webclient.zip https://codeload.github.com/i2b2/i2b2-webclient-classic/zip/refs/tags/v${i2b2_version} && \
     mkdir -p /var/www/html/webclient/ && \
     unzip /tmp/i2b2-webclient.zip -d /tmp/ && \
     mv -T /tmp/i2b2-webclient-1.7.13.0002 /tmp/webclient && \
