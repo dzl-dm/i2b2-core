@@ -55,7 +55,7 @@ shopt -s nocasematch
 ## Ensure variables defined so we don't have to check later
 sso_enabled=${sso_enabled:-false}
 show_demo_login=${show_demo_login:-false}
-saml_login_label=${saml_login_label:-"DZL SSO"}
+saml_login_label=${saml_login_label:-"I2B2 SSO"}
 login_dropdown_label=${login_dropdown_label:-"Login method"}
 ## We proxy /i2b2/ to the wildfly backend, so we can use that in configs after apache
 pmURL="http://localhost/i2b2/rest/PMService/getServices"
@@ -88,42 +88,28 @@ else
 fi
 
 ## Customisation
-echo >&2 "$(date +"$df") INFO: Customising interface..."
+echo >&2 "$(date +"$df") INFO: Customising web interface..."
 echo >&2 "$(date +"$df") DEBUG: Backing up files which will be changed..."
 cd /var/www/html/
-cp -a webclient/login.php{,_BAK}
-cp -a webclient/logout.php{,_BAK}
-cp -a webclient/index.php{,_BAK}
-cp -a webclient/i2b2_config_data.js{,_BAK}
-cp -a webclient/js-i2b2/i2b2_ui_config.js{,_BAK}
-## Reference correct backend
+cp -a webclient/proxy.php{,_IMAGE}
+cp -a webclient/i2b2_config_cells.json{,_IMAGE}
+cp -a webclient/i2b2_config_domains.json{,_IMAGE}
+cp -a webclient/js-i2b2/i2b2_ui_config.js{,_IMAGE}
+## Reference correct wildfly backend
 echo >&2 "$(date +"$df") DEBUG: Setting backend to: '${pmURL}' (accessible from the web server, not user's browser)"
-sed -i -re "s|([$]pmURL[[:blank:]]*=[[:blank:]]*).*|\1\"${pmURL}\";|" webclient/index.php
-## Simply whitelist the pmURL
-# sed -i -re "/[$]WHITELIST.=.array.*/a\    \"${wildfly_scheme}:\/\/${wildfly_host}:${wildfly_port}\"," webclient/index.php
-## Relax the regex pattern to capture the pmURL automatically (double escaping?)
-## target_regex="/(http|https)\:\/\/[a-zA-Z0-9\-\.]+(\:[0-9]{2,5})*\/?/"
-## output_regex="/(http|https)\:\/\/[a-zA-Z0-9\-\.]+(\:[0-9]{2,5})*\/?/"
-## new_regex="/\(http\|https\)\\\:\\\/\\\/\[a-zA-Z0-9\\-\\.\]\+\(\\\:\[0-9\]{2,5})\*\\/\?/\" ## <- Use directly in sed substitution
+sed -i -re "s|([$]pmURL[[:blank:]]*=[[:blank:]]*).*|\1\"${pmURL}\";|" webclient/proxy.php
 echo >&2 "$(date +"$df") DEBUG: Setting new, relaxed regex for automatically whitelisting pmURL"
-sed -i -e 's|\(\$regex[[:blank:]]*=[[:blank:]]*\).*|\1\"/\(http\|https\)\\\:\\\/\\\/\[a-zA-Z0-9\\-\\.\]\+\(\\\:\[0-9\]{2,5})\*\\/\?/\";|g'  webclient/index.php
+sed -i -e 's|\(\$regex[[:blank:]]*=[[:blank:]]*\).*|\1\"/\(http\|https\)\\\:\\\/\\\/\[a-zA-Z0-9\\-\\.\]\+\(\\\:\[0-9\]{2,5})\*\\/\?/\";|g'  webclient/proxy.php
 
 if [[ $sso_enabled == "true" ]]; then
   echo >&2 "$(date +"$df") DEBUG: Update config data for SSO logins"
-  envsubst "\${ORGANISATION_NAME} \${wildfly_scheme} \${wildfly_host} \${wildfly_port} \${ajp_proxy_url}" < /docker-config/i2b2_config_data_SSO-TEMPLATE.js > webclient/i2b2_config_data.js
+  cp -a webclient/i2b2_config_domains.json{,.bak} && \
+  cat webclient/i2b2_config_domains.json.bak | jq 'del(.lstDomains[] | select(.name=="i2b2 (builtin)"))' > webclient/i2b2_config_domains.json
 else
   echo >&2 "$(date +"$df") DEBUG: Update config data for local logins - disable SSO logins"
-  envsubst "\${ORGANISATION_NAME} \${wildfly_scheme} \${wildfly_host} \${wildfly_port}" < /docker-config/i2b2_config_data_TEMPLATE.js > webclient/i2b2_config_data.js
-  ## Load as JSON (ignoring comments) and remove federated login option - TODO: Fixing config to use JSON breaks lots of other things
-  # sed -e '/^[[:blank:]]*#/d' -e '/^[[:blank:]]*\/\//d' webclient/i2b2_config_data_TMP.js | jq 'del(.lstDomains[] | select(.loginType == "federated"))' > webclient/i2b2_config_data.js
+  cp -a webclient/i2b2_config_domains.json{,.bak} && \
+  cat webclient/i2b2_config_domains.json.bak | jq 'del(.lstDomains[] | select(.name=="*sso*"))' > webclient/i2b2_config_domains.json
 fi
-## Disable analysis and debugging for production
-echo >&2 "$(date +"$df") DEBUG: Disable i2b2 analysis and debugging"
-sed -i -re 's|(debug: ).*|\1false,|g' -e 's|(allowAnalysis: ).*|\1false,|g' webclient/i2b2_config_data.js
-## Use compatible php for the login page (ensure AssertionConsumerServiceURL uses correct scheme during saml login - the $url)
-echo >&2 "$(date +"$df") DEBUG: Update login/logout php"
-cp /docker-config/login.php webclient/login.php
-cp /docker-config/logout.php webclient/logout.php
 
 if [[ ${show_demo_login} != "true" ]] ; then
     echo >&2 "$(date +"$df") INFO: Disabling the default demo user credentials"
