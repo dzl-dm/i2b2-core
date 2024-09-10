@@ -1,0 +1,35 @@
+## Install i2b2 wildfly application from their "upgrade" .zip archive
+
+## Extract pre-built i2b2 wildfly from zip - to keep final image size lower
+FROM debian:11-slim AS wildfly-extract
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt update && \
+    apt install -y --no-install-recommends \
+    unzip \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+## Download link uses a js script to actually fetch the archive, so can't automate
+# COPY https://www.i2b2.org/software/download.html
+COPY build/i2b2core-upgrade-181.zip /tmp/
+RUN cd /tmp; unzip i2b2core-upgrade-181.zip
+
+## Deploy new .war in old image
+FROM ghcr.io/dzl-dm/i2b2-core/i2b2-wildfly:v1.7.13-2
+
+ENV TZ=${TZ:-'Europe/Berlin'}
+
+## Update execute.sh script and set new postgres driver version
+ENV postgresqlDriverVersion=42.7.1
+COPY --chmod=0755 ./config/execute.sh ${JBOSS_HOME}/customization/execute.sh
+
+## Add updated artefacts from extract stage
+COPY --from=wildfly-extract --chown=jboss:0 /tmp/i2b2/deployments/postgresql-*.jar ${JBOSS_HOME}/customization/
+COPY --from=wildfly-extract --chown=jboss:0 /tmp/i2b2/deployments/i2b2.war /opt/jboss/wildfly/customization/i2b2.war
+# RUN mkdir -p /app/oracle/wildfly-17.0.1.Final/standalone/log/ && chown -R jboss:0 /app
+
+## Override entrypoint for custom initialization...
+ENTRYPOINT ["docker-bootstrap.sh"]
+## From upstream (must be repeated)...
+CMD ["/opt/jboss/wildfly/customization/execute.sh"]

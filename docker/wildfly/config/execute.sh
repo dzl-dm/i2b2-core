@@ -58,7 +58,7 @@ function create_postgres_ds() {
   $JBOSS_CLI -c << EOF
     batch
     # Add Postgres module
-    module add --name=org.postgresql --resources=/opt/jboss/wildfly/customization/postgresql-42.3.2.jar --dependencies=javax.api,javax.transaction.api
+    module add --name=org.postgresql --resources=/opt/jboss/wildfly/customization/postgresql-${postgresqlDriverVersion:-42.3.2}.jar --dependencies=javax.api,javax.transaction.api
 
     # Add Postgres driver
     /subsystem=datasources/jdbc-driver=postgres:add(driver-name="postgres",driver-module-name="org.postgresql",driver-class-name=org.postgresql.Driver)
