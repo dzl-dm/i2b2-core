@@ -1,5 +1,5 @@
-## Install apache and proxy manually to keep image size low, aid transparency
-## and reduce dependancy on i2b2's images (in particular for security updates of dependencies - apache and php)
+## Install manually to keep image size low, aid transparency and reduce/avoid dependancy
+## on i2b2's docker images (in particular for security updates of dependencies - apache and php)
 ARG i2b2_version=${i2b2_version:-v1.8.1.0001}
 ARG WEB_TAG=${I2B2_WEB_TAG:-'release-v1.8.1'}
 
@@ -10,16 +10,17 @@ RUN apk add git
 
 RUN cd /tmp && \
     git clone --branch ${i2b2_version} --depth 1 https://github.com/i2b2/i2b2-webclient.git && \
-    rm i2b2-webclient/README.md i2b2-webclient/external-site-example.html
+    cd i2b2-webclient/ && \
+    rm README.md external-site-example.html .gitignore && \
+    rm -rf .git
 
+RUN cp -a /tmp/i2b2-webclient/proxy.php /tmp/i2b2-webclient/proxy.php_UPSTREAM
 ## Fix generic bugs
 # Don't fail when there is no query string (always the case at logon as its via POST)
-# RUN sed -i "s/if ($sec_fix['query'] != null) {/if (array_key_exists('query', $sec_fix) and $sec_fix['query'] != null) {/g" /tmp/i2b2-webclient/proxy.php
 RUN sed -i "s/if (\$sec_fix\['query'\] != null) {/if (array_key_exists('query', \$sec_fix) and \$sec_fix\['query'\] != null) {/g" /tmp/i2b2-webclient/proxy.php
 
 # CMD tail -F any
 
-# FROM php:8.3.9-alpine
 ## php:8.3.9-apache-bullseye uses apache 2.4.59
 FROM php:8.3.9-apache-bullseye
 
@@ -48,17 +49,28 @@ COPY --chmod=0644 ./assets/favicon.ico /var/www/html/webclient/
 COPY ./config /docker-config/
 COPY --chmod=0755 ./bootstrap-web.sh /usr/local/bin/docker-bootstrap.sh
 
-## Fix legacy plugin use of proxy
+## Should be default workdir for apache/php docker image
+WORKDIR /var/www/html/
+
+## Backup files we change for transparancy (stil no bash here!)
+RUN cp -a webclient/i2b2_config_domains.json webclient/i2b2_config_domains.json_UPSTREAM && \
+    cp -a webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/i2b2_config_data.js webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/i2b2_config_data.js_UPSTREAM
+
+## Fix login config's use of proxy
+# RUN sed -i -re 's|("urlProxy"[[:blank:]]*:[[:blank:]]*).*|\1"/webclient/proxy.php",|g' webclient/i2b2_config_domains.json
+RUN jqoutput="$(jq '.urlProxy = "/webclient/proxy.php"' webclient/i2b2_config_domains.json)"; \
+    echo ${jqoutput} > webclient/i2b2_config_domains.json
+## Fix login config's wildfly references
+RUN jqoutput="$(jq '.lstDomains[].urlCellPM = "http://i2b2.wildfly:8080/i2b2/services/PMService/"' webclient/i2b2_config_domains.json)"; \
+    echo ${jqoutput} | jq '' > webclient/i2b2_config_domains.json
+## Fix legacy plugin use of proxy (not official json, can't use jq!)
 RUN sed -i -re 's|(urlProxy[[:blank:]]*:[[:blank:]]*).*|\1"/webclient/proxy.php",|g' webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/i2b2_config_data.js
-
-## Update some i2b2 config for our docker environment
-COPY --chmod=0644 ./config/i2b2_config_domains.json /var/www/html/webclient/i2b2_config_domains.json
-## Also update proxy
-RUN sed -i 's|"http://services.i2b2.org",|"http://i2b2-wildfly:8080",\n    "http://i2b2.wildfly:8080",\n    "http://services.i2b2.org",|g' /var/www/html/webclient/proxy.php
-
+## Also update proxy whitelist
+RUN sed -i 's|"http://services.i2b2.org",|"http://i2b2-wildfly:8080",\n    "http://i2b2.wildfly:8080",|g' /var/www/html/webclient/proxy.php
 
 ## System env
 ENV TZ=${TZ:-'Europe/Berlin'}
+ENV log_verbosity=2
 ## App defaults
 ENV i2b2_host_display_name='Central i2b2 data warehouse'
 ENV web_fqdn='localhost'
