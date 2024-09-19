@@ -2,7 +2,6 @@
 ## Bootstrap will check for and load docker secrets, then specific processing for the container purpose
 ## such as setting configuration based on environment variables 
 
-set -e
 df="[%Y-%m-%d %H:%M:%S]"
 
 function log_debug { [[ "${log_verbosity}" -ge 3 ]] && echo "[$(date +"$df")] DEBUG: ${@}"; }

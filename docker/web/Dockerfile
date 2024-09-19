@@ -53,7 +53,8 @@ COPY --chmod=0755 ./bootstrap-web.sh /usr/local/bin/docker-bootstrap.sh
 WORKDIR /var/www/html/
 
 ## Backup files we change for transparancy (stil no bash here!)
-RUN cp -a webclient/i2b2_config_domains.json webclient/i2b2_config_domains.json_UPSTREAM && \
+RUN cp -a webclient/proxy.php webclient/proxy.php_UPSTREAM && \
+    cp -a webclient/i2b2_config_domains.json webclient/i2b2_config_domains.json_UPSTREAM && \
     cp -a webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/i2b2_config_data.js webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/i2b2_config_data.js_UPSTREAM
 
 ## Fix login config's use of proxy
