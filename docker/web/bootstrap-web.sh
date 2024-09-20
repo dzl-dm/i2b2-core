@@ -96,14 +96,13 @@ fi
 ## Customisation
 log_info "Customising web interface..."
 log_debug "Backing up files which will be changed..."
-cd /var/www/html/
-## Edit image file directly
-cp -a webclient/proxy.php{,_IMAGE}
-cp -a webclient/js-i2b2/i2b2_ui_config.js{,_IMAGE}
-cp -a webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/js-i2b2/i2b2_loader.js{,_IMAGE}
-cp -a webclient/i2b2_config_cells.json{,_IMAGE}
-cp -a webclient/i2b2_config_domains.json{,_IMAGE}
-cp -a webclient/js-i2b2/i2b2_ui_config.js{,_IMAGE}
+cd /var/www/html/ > /dev/null
+## Backup files to preserver IMAGE state
+[[ -f webclient/proxy.php_IMAGE ]] || cp -a webclient/proxy.php{,_IMAGE}
+[[ -f webclient/js-i2b2/i2b2_ui_config.js_IMAGE ]] || cp -a webclient/js-i2b2/i2b2_ui_config.js{,_IMAGE}
+[[ -f webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/js-i2b2/i2b2_loader.js_IMAGE ]] || cp -a webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/js-i2b2/i2b2_loader.js{,_IMAGE}
+[[ -f webclient/i2b2_config_cells.json_IMAGE ]] || cp -a webclient/i2b2_config_cells.json{,_IMAGE}
+[[ -f webclient/i2b2_config_domains.json_IMAGE ]] || cp -a webclient/i2b2_config_domains.json{,_IMAGE}
 ## Reference correct wildfly backend
 log_debug "Setting backend to: '${pmURL}' (accessible from the web server, not user's browser)"
 sed -i -re "s|([$]pmURL[[:blank:]]*=[[:blank:]]*).*|\1\"${pmURL}\";|" webclient/proxy.php
@@ -121,13 +120,16 @@ if [[ $sso_enabled == "true" ]]; then
   cat webclient/i2b2_config_domains.json.bak | jq 'del(.lstDomains[] | select(.name=="i2b2 (builtin)"))' > webclient/i2b2_config_domains.json
 else
   log_debug "Update config data for local logins - disable SSO logins"
-  jqoutput="$(jq 'del(.lstDomains[] | select(.name!="i2b2.org Demo"))' webclient/i2b2_config_domains.json)"
-  echo ${jqoutput} > webclient/i2b2_config_domains.json
-  jqoutput="$(jq "(.lstDomains[] | select(.name==\"i2b2.org Demo\")).name = \"${i2b2_host_display_name}\"" webclient/i2b2_config_domains.json)"
-  echo ${jqoutput} | jq '' > webclient/i2b2_config_domains.json
+  if grep '"name": "i2b2.org Demo",' webclient/i2b2_config_domains.json > /dev/null ; then
+    jqoutput="$(jq 'del(.lstDomains[] | select(.name!="i2b2.org Demo"))' webclient/i2b2_config_domains.json)"
+    echo ${jqoutput} > webclient/i2b2_config_domains.json
+    jqoutput="$(jq "(.lstDomains[] | select(.name==\"i2b2.org Demo\")).name = \"${i2b2_host_display_name}\"" webclient/i2b2_config_domains.json)"
+    echo ${jqoutput} | jq '' > webclient/i2b2_config_domains.json
+    log_debug "Config data for logins updated"
+  else
+    log_warn "File 'i2b2_config_domains.json' is not as expected, not making changes to login selection"
+  fi
 fi
-
-cd -
 
 if [[ $sso_enabled == "true" ]]; then
   log_error "NOT YET IMPLEMENTED - cannot setup SSO logins" && exit 1
@@ -152,7 +154,7 @@ if [[ $sso_enabled == "true" ]]; then
 fi
 
 ## Manage plugin availability (if we're showing demo login, just leave all plugins available)
-if [[ $show_demo_login == "false" ]]; then
+if [[ ${show_demo_login} != "true" ]]; then
   log_debug "Removing sample/demo plugins"
   removeKey="edu.harvard.catalyst.example"
   jqoutput="$(jq "del(.[] | select(.==\"${removeKey}\"))" webclient/plugins/plugins.json)"
@@ -164,6 +166,8 @@ if [[ $show_demo_login == "false" ]]; then
   escapedPlugins=$(echo "${escaped1}" | sed '$!s@$@\\@g')
   sed -i -re "/i2b2.hive.tempCellsList[[:blank:]]*=[[:blank:]]*/,/^[[:blank:]]*\]\;/{s/(i2b2.hive.tempCellsList[[:blank:]]*=[[:blank:]]*).*/\1${escapedPlugins};/p;d}" webclient/js-i2b2/cells/LEGACYPLUGIN/legacy_plugin/js-i2b2/i2b2_loader.js
 fi
+
+cd - > /dev/null
 
 ## Now continue the startup process with the remaining ENTRYPOINT and CMD parameters
 log_info "Continuing startup process (with CMD: $@)..."
